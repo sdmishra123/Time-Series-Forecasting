@@ -58,40 +58,40 @@ Test Window: Forecast 4 weeks of Sales from  5th of July 2015 - 26th of July 201
 ###I) Approach I <br/>
 Layer 1: Dimensionality Reduction Technique: Singular Value Decomposition (SVD)<br/>
 Layer 2:<br/>
-1.Auto Arima<br/>
-2.TSLM<br/>
-3.Prophet<br/>
-4.Arima (Grid Search)<br/>
+> 1.Auto Arima<br/>
+> 2.TSLM<br/>
+> 3.Prophet<br/>
+> 4.Arima (Grid Search)<br/>
 
 Step 1: Generating the Principal Components<br/>
 To reduce the 935 stores to a lower-dimensionality representation, we performed Singular Value Decomposition to then identify principal components to represent our data.<br/>
 SVD decomposes a matrix A (dim nxd) into:<br/>
-  matrix U with columns of left singular vectors (nxn)<br/>
-  matrix V with columns of right singular vectors (dxd), and <br/>
-  diagonal matrix S of the singular values of A (nxd) such that A = UᐧSᐧVT <br/>
+  > matrix U with columns of left singular vectors (nxn)<br/>
+  > matrix V with columns of right singular vectors (dxd), and <br/>
+  > diagonal matrix S of the singular values of A (nxd) such that A = UᐧSᐧVT <br/>
 
   ![alt text](https://github.com/sdmishra123/Time-Series-Forecasting/blob/master/image.png)
 
 Step2: Forecasting the Principal Components <br/>
 After calculating the U, S, V of the SVD, we need to choose the principal components to forecast<br/>
-The matrix of principal component columns is calculated as UᐧS (dim nxd)<br/>
-Analyzing the explained variance ratio of these components with a scree plot of d, we identify that the first 3 components account for 99% of the total variance of the data set.<br/>
-Now we can use the first 3 principal component columns of UᐧS as the time series to forecast.<br/>
-We used the above mentioned 4 Forecasting techniques Auto Arima,TSLM,Prophet and Arima with Grid Search.
+> The matrix of principal component columns is calculated as UᐧS (dim nxd)<br/>
+> Analyzing the explained variance ratio of these components with a scree plot of d, we identify that the first 3 components account for 99% of the total variance of the data set.<br/>
+> Now we can use the first 3 principal component columns of UᐧS as the time series to forecast.<br/>
+> We used the above mentioned 4 Forecasting techniques Auto Arima,TSLM,Prophet and Arima with Grid Search.
 
 Step3: Reconstruction of Original Sales<br/>
 After forecasting the first 3 columns of UᐧS, we need to recompose the principal component forecasts back to the 935 stores sales.<br/>
-The UᐧS matrix is extended by the h steps forecasted<br/>
-The forecasted values are placed in the first 3 columns of the n+1 to n+h rows.<br/>
-The remaining values of the forecasted rows are filled with the values from the nth (last known) row.<br/>
-The original A (plus forecast) is then reconstructed with the dot product A = UᐧSᐧVT <br/>
-Final outcome : 134 rows (representing the time series Jan 2013 to July 2015) and 935 columns(fitted + forecasted values for the 935 stores)<br/>
+> The UᐧS matrix is extended by the h steps forecasted<br/>
+> The forecasted values are placed in the first 3 columns of the n+1 to n+h rows.<br/>
+> The remaining values of the forecasted rows are filled with the values from the nth (last known) row.<br/>
+> The original A (plus forecast) is then reconstructed with the dot product A = UᐧSᐧVT <br/>
+> Final outcome : 134 rows (representing the time series Jan 2013 to July 2015) and 935 columns(fitted + forecasted values for the 935 stores)<br/>
 
 ![alt text](https://github.com/sdmishra123/Time-Series-Forecasting/blob/master/SVD.png)<br/>
 
 The advantage of using SVD is that it works very well on a non-square matrix!.<br/>
 
-####II) Approach II <br/>
+#### II) Approach II <br/>
 Layer 1: Dimensionality Reduction Technique: Independent Component Analysis (ICA)<br/>
 Layer 2:<br/>
 1.Auto Arima<br/>
@@ -107,16 +107,16 @@ ICA is superficially related to principal component analysis and factor analysis
 ![alt text](https://github.com/sdmishra123/Time-Series-Forecasting/blob/master/ICA%202.png)<br/>
 
 
-###III) Approach III <br/>
+### III) Approach III <br/>
 Layer 1: Non-Negative Matrix Factorization (NMF)<br/>
 Layer 2:<br/>
-1.Auto Arima<br/>
+> 1.Auto Arima<br/>
 
-Non-negative matrix factorization (NMF or NNMF), also non-negative matrix approximation is a group of algorithms in multivariate analysis and linear algebra where a matrix V is factorized into (usually) two matrices W and H, with the property that all three matrices have no negative elements. This non-negativity makes the resulting matrices easier to inspect.
+Non-negative matrix factorization (NMF or NNMF), also non-negative matrix approximation is a group of algorithms in multivariate analysis and linear algebra where a matrix V is factorized into (usually) two matrices W and H, with the property that all three matrices have no negative elements. This non-negativity makes the resulting matrices easier to inspect.<br/>
 
 ![alt text](https://github.com/sdmishra123/Time-Series-Forecasting/blob/master/NMF.png)
 
-###IV) Approach IV <br/>
+### IV) Approach IV <br/>
 Layer 1: Hierarchical (HTS)<br/>
 Layer2:<br/>
 Auto Arima<br/>
@@ -131,4 +131,27 @@ Auto Arima<br/>
  ![alt text](https://github.com/sdmishra123/Time-Series-Forecasting/blob/master/HTS 2.png) <br/>
 
 # Demonstration on R-Shiny App:<br/>
+This application will help each of the store managers to stock-in their products given the forecasted sales for the next 4-weeks.<br/>
+The app table is sorted by asceding order of the Mean Absolute Error of the model. So in other words the first row indicates the best forecasting for the store with least error rate.<br/>
 
+![alt text](https://github.com/sdmishra123/Time-Series-Forecasting/blob/master/RShiny-User%20Interface.png) <br/>
+
+# Model Evaluation Metrics:
+
+We don't have single or genric model that would give very accurate forecast for all the 935 Stores. For different stores there are different winner models and they are shown as below:<br/>
+
+We have used Symmetric Mean Absolute Percent Error (sMAPE) metric for evaluating our model.<br/>
+SMAPE ignores outliers. It is also invariant if you linearly rescale data. In our case there were some stores wherein the weekly sales was zero so sMAPE took care of such scenarios<br/>
+
+![alt text](https://github.com/sdmishra123/Time-Series-Forecasting/blob/master/Evaluation%20Metric.png)<br/>
+![alt text](https://github.com/sdmishra123/Time-Series-Forecasting/blob/master/Evaluation%202.png)
+
+
+# Future Work:
+> 1. Build intervention models for the 180 excluded stores.
+
+> 2. ICA reconstruction for time series needs deeper research and development, due to availability of sparse material online, further research would need more formal advisory and administrative support to source patented material online.
+
+> 3. For some stores ARFIMA model showed better forecast with small error rate(sMAPE) given the time series of those stores showed long memory. Some sample stores are shown below in the image.
+
+![alt text](https://github.com/sdmishra123/Time-Series-Forecasting/blob/master/Screen%20Shot%202020-09-04%20at%209.36.58%20AM.png)

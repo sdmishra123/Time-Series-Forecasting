@@ -55,7 +55,7 @@ Test Window: Forecast 4 weeks of Sales from  5th of July 2015 - 26th of July 201
 ![alt text](https://github.com/sdmishra123/Time-Series-Forecasting/blob/master/proposed%20Model.png)<br/>
 
 
-I) Approach I <br/>
+###I) Approach I <br/>
 Layer 1: Dimensionality Reduction Technique: Singular Value Decomposition (SVD)<br/>
 Layer 2:<br/>
 1.Auto Arima<br/>
@@ -77,6 +77,7 @@ After calculating the U, S, V of the SVD, we need to choose the principal compon
 The matrix of principal component columns is calculated as UᐧS (dim nxd)<br/>
 Analyzing the explained variance ratio of these components with a scree plot of d, we identify that the first 3 components account for 99% of the total variance of the data set.<br/>
 Now we can use the first 3 principal component columns of UᐧS as the time series to forecast.<br/>
+We used the above mentioned 4 Forecasting techniques Auto Arima,TSLM,Prophet and Arima with Grid Search.
 
 Step3: Reconstruction of Original Sales<br/>
 After forecasting the first 3 columns of UᐧS, we need to recompose the principal component forecasts back to the 935 stores sales.<br/>
@@ -86,27 +87,36 @@ The remaining values of the forecasted rows are filled with the values from the 
 The original A (plus forecast) is then reconstructed with the dot product A = UᐧSᐧVT <br/>
 Final outcome : 134 rows (representing the time series Jan 2013 to July 2015) and 935 columns(fitted + forecasted values for the 935 stores)<br/>
 
-![alt text](https://github.com/sdmishra123/Time-Series-Forecasting/blob/master/SVD.png)
+![alt text](https://github.com/sdmishra123/Time-Series-Forecasting/blob/master/SVD.png)<br/>
 
+The advantage of using SVD is that it works very well on a non-square matrix!.<br/>
 
-II) Approach II <br/>
+####II) Approach II <br/>
 Layer 1: Dimensionality Reduction Technique: Independent Component Analysis (ICA)<br/>
 Layer 2:<br/>
 1.Auto Arima<br/>
+
+Independent component analysis (ICA) is a statistical and computational technique for revealing hidden factors that underlie sets of random variables, measurements, or signals.<br/>
+
+ICA defines a generative model for the observed multivariate data, which is typically given as a large database of samples. In the model, the data variables are assumed to be linear mixtures of some unknown latent variables, and the mixing system is also unknown. The latent variables are assumed nongaussian and mutually independent, and they are called the independent components of the observed data. These independent components, also called sources or factors, can be found by ICA.<br/>
+
+ICA is superficially related to principal component analysis and factor analysis. ICA is a much more powerful technique, however, capable of finding the underlying factors or sources when these classic methods fail completely.<br/>
 
 ![alt text](https://github.com/sdmishra123/Time-Series-Forecasting/blob/master/ICA.png)<br/>
 
 ![alt text](https://github.com/sdmishra123/Time-Series-Forecasting/blob/master/ICA%202.png)<br/>
 
 
-III) Approach III <br/>
+###III) Approach III <br/>
 Layer 1: Non-Negative Matrix Factorization (NMF)<br/>
 Layer 2:<br/>
 1.Auto Arima<br/>
 
+Non-negative matrix factorization (NMF or NNMF), also non-negative matrix approximation is a group of algorithms in multivariate analysis and linear algebra where a matrix V is factorized into (usually) two matrices W and H, with the property that all three matrices have no negative elements. This non-negativity makes the resulting matrices easier to inspect.
+
 ![alt text](https://github.com/sdmishra123/Time-Series-Forecasting/blob/master/NMF.png)
 
-IV) Approach IV <br/>
+###IV) Approach IV <br/>
 Layer 1: Hierarchical (HTS)<br/>
 Layer2:<br/>
 Auto Arima<br/>
@@ -115,4 +125,7 @@ Auto Arima<br/>
   3)Optimal Combination<br/>
   4)Bottom-Up<br/>
   
+Link (Rob Hyndman Hierachial Clustering) :- https://otexts.com/fpp2/hierarchical.html
+  
  ![alt text](https://github.com/sdmishra123/Time-Series-Forecasting/blob/master/HTS.png) 
+ ![alt text](https://github.com/sdmishra123/Time-Series-Forecasting/blob/master/HTS 2.png) 

@@ -55,7 +55,7 @@ Test Window: Forecast 4 weeks of Sales from  5th of July 2015 - 26th of July 201
 ![alt text](https://github.com/sdmishra123/Time-Series-Forecasting/blob/master/proposed%20Model.png)<br/>
 
 
-###I) Approach I <br/>
+### I) Approach I <br/>
 Layer 1: Dimensionality Reduction Technique: Singular Value Decomposition (SVD)<br/>
 Layer 2:<br/>
 > 1.Auto Arima<br/>

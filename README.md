@@ -120,12 +120,15 @@ Non-negative matrix factorization (NMF or NNMF), also non-negative matrix approx
 Layer 1: Hierarchical (HTS)<br/>
 Layer2:<br/>
 Auto Arima<br/>
-  1)Middle Out<br/>
-  2)Top Down<br/>
-  3)Optimal Combination<br/>
-  4)Bottom-Up<br/>
+> 1)Middle Out<br/>
+> 2)Top Down<br/>
+> 3)Optimal Combination<br/>
+> 4)Bottom-Up<br/>
   
-Link (Rob Hyndman Hierachial Clustering) :- https://otexts.com/fpp2/hierarchical.html
+# Link (Rob Hyndman Hierachial Clustering) :- https://otexts.com/fpp2/hierarchical.html<br/>
   
- ![alt text](https://github.com/sdmishra123/Time-Series-Forecasting/blob/master/HTS.png) 
- ![alt text](https://github.com/sdmishra123/Time-Series-Forecasting/blob/master/HTS 2.png) 
+ ![alt text](https://github.com/sdmishra123/Time-Series-Forecasting/blob/master/HTS.png) <br/>
+ ![alt text](https://github.com/sdmishra123/Time-Series-Forecasting/blob/master/HTS 2.png) <br/>
+
+# Demonstration on R-Shiny App:<br/>
+

@@ -1,0 +1,530 @@
+---
+title: "models_TS"
+author: "Li Cao"
+date: "5/23/2020"
+output: html_document
+---
+
+```{r}
+data<-read.csv("Analytical_Base_Table.csv")
+#data<-as.data.frame(data)
+
+typeof(data$Date)
+```
+
+```{r}
+library(dplyr)
+#library(tidyverse)
+data$Date<-as.character(data$Date)
+
+train<-data %>%
+  filter(Date >= "2013-01-06" & Date <= "2015-06-30")
+
+#train<-train[,-1]
+
+test<-data %>%
+  filter(Date >= "2015-07-01" & Date <= "2015-07-31")
+
+
+#test<-test[,-1]
+# to be a better operation dataframe 
+# train
+
+train_byrow <- list(length = length(unique(train$Store)))
+for(i in seq_along(unique(train$Store))) {
+   train_byrow[[i]] <- train %>%
+     filter(Store == unique(train$Store)[i]) %>%
+     select(Weekly_Sales)
+}
+
+train_byrow_matrix = do.call(cbind, train_byrow)
+colnames(train_byrow_matrix) <- paste("Store", unique(train$Store), sep = "")
+train_byrow_matrix=cbind(unique(train$Date),train_byrow_matrix)
+train_byrow_matrix
+# test 
+test_byrow <- list(length = length(unique(test$Store)))
+for(i in seq_along(unique(test$Store))) {
+   test_byrow[[i]] <- test %>%
+        filter(Store == unique(test$Store)[i]) %>%
+        select(Weekly_Sales)
+}
+
+test_byrow_matrix = do.call(cbind, test_byrow)
+colnames(test_byrow_matrix) <- paste("Store", unique(test$Store), sep = "")
+test_byrow_matrix=cbind(unique(test$Date),test_byrow_matrix)
+test_byrow_matrix
+
+
+```
+
+```{r}
+# no need for time
+train_byrow_matrix<-train_byrow_matrix[,-1]
+test_byrow_matrix<-test_byrow_matrix[,-1]
+```
+
+```{r}
+library(tseries)
+library(forecast)
+models<-list()
+forecast_num<-list()
+for (i in (1:ncol(train_byrow_matrix))){
+  model<- auto.arima(train_byrow_matrix[,i],lambda = BoxCox.lambda(train_byrow_matrix[,i]))
+  forecast_num[[i]]<-forecast(model,h=4)$mean
+  models[[i]]<-model
+}
+
+forecast_num<-data.frame(matrix(unlist(forecast_num), ncol=length(forecast_num), byrow=F))
+colnames(forecast_num)<-colnames(train_byrow_matrix)
+forecast_num
+
+```
+
+```{r}
+# get mape
+mape <- function(y, yhat,digits)
+  round(mean(abs((y - yhat)/y)),digits = digits)
+
+smape<-function(y,yhat,digits)
+  round(mean(abs(y-yhat)/(abs(y)+abs(yhat))),3)
+
+mape_auto<-list()
+for (i in (1:ncol(forecast_num))){
+  mape_auto[[i]]<-mape(test_byrow_matrix[,i],forecast_num[,i],3)
+}
+mape_auto<-data.frame(matrix(unlist(mape_auto), ncol=length(mape_auto), byrow=F))
+colnames(mape_auto)<-colnames(test_byrow_matrix)
+
+# smape 
+smape_auto<-list()
+for (i in (1:ncol(forecast_num))){
+  smape_auto[[i]]<-smape(test_byrow_matrix[,i],forecast_num[,i],3)
+}
+smape_auto<-data.frame(matrix(unlist(smape_auto), ncol=length(smape_auto), byrow=F))
+colnames(smape_auto)<-colnames(test_byrow_matrix)
+bad_perform_SMAPE=smape_auto[which(smape_auto>0.15)]
+
+# some bad performance stores 
+bad_performance=mape_auto[which(mape_auto>0.8)]
+bad_list=colnames(bad_performance)
+bad_list
+# 292 and 876 bad performance because of early close, so individually set h=1 or h=2
+test_byrow_matrix[,colnames(test_byrow_matrix) %in% bad_list]
+# get column number to extract auto.arima aic 
+col_num=which(colnames(test_byrow_matrix) %in% bad_list)
+
+for (i in col_num) {
+  print(models[i])
+}
+
+
+```
+
+```{r}
+rbind(bad_performance,col_num)
+```
+```{r}
+test_byrow_matrix[,colnames(test_byrow_matrix) %in% bad_list]
+```
+
+```{r}
+# 105,106,292,589,665,699,837,861,876
+# store 105
+ts.plot(train_byrow_matrix$Store105)
+# slow decay, try arfima
+acf(train_byrow_matrix$Store105)
+arima_105=(arfima(train_byrow_matrix$Store105))
+
+result<-data.frame()
+for (d in 1:2){
+  for(p in 1:3){
+    for(q in 2:3){
+    fit<-Arima(train_byrow_matrix$Store105,order=c(p,d,q),lambda = BoxCox.lambda(train_byrow_matrix$Store105))
+    result<-rbind(result,c(p,d,q,fit$aic,fit$bic))
+  }
+}
+}
+names(result)<-c("p","d","q","AIC","BIC")  
+# We can see that model Arima(0,0,3) same as auto.arima returns us smallest AIC and BIC
+result[which.min(result$AIC),]
+result[which.min(result$BIC),]
+
+# try different prediction method:
+dynamic_model_105_residual<-list()
+dirrec_105_prediction<-c()
+dirrec_train_105=train_byrow_matrix$Store105
+for (i in 1:4){
+  # build dynamic model
+  models<-auto.arima(dirrec_train_105,lambda = BoxCox.lambda(dirrec_train_105))
+  dynamic_model_105_residual[[i]]<-models$residuals
+  # predict 1 step ahead 
+  dirrec_105_prediction<-forecast(models,1)$mean
+  # add each predictive data to train 
+  dirrec_train_105=c(dirrec_train_105,dirrec_105_prediction)
+}
+dirrec_train_105[131:134]
+# improve but still large, this is not our probelm 
+dirrec_mape105=mape(test_byrow_matrix$Store105,dirrec_train_105[131:134],3)
+dirrec_mape105
+
+# it is because first 20 week are too chaotic
+mape_105=mape(test_byrow_matrix$Store105,forecast(auto.arima(train_byrow_matrix$Store105[20:130],lambda = BoxCox.lambda(train_byrow_matrix$Store105[20:130])),h=4)$mean,3)
+mape_105
+########################################## SMAPE
+smape_105<-smape(test_byrow_matrix$Store105,forecast(auto.arima(train_byrow_matrix$Store105[20:130],lambda = BoxCox.lambda(train_byrow_matrix$Store105[20:130])),h=4)$mean,3)
+smape_105
+```
+
+
+```{r}
+# store 106: same issue as store 105
+ts.plot(train_byrow_matrix$Store106)
+mape_106=mape(test_byrow_matrix$Store106,forecast(auto.arima(train_byrow_matrix$Store106[30:130],lambda = BoxCox.lambda(train_byrow_matrix$Store106[30:130])),h=4)$mean,3)
+mape_106
+############################################### SMAPE
+smape_106<-smape(test_byrow_matrix$Store106,forecast(auto.arima(train_byrow_matrix$Store106[30:130],lambda = BoxCox.lambda(train_byrow_matrix$Store106[30:130])),h=4)$mean,3)
+smape_106
+# arfima didn't work well 
+mape(test_byrow_matrix$Store106,forecast(arfima(train_byrow_matrix$Store106,lambda = BoxCox.lambda(train_byrow_matrix$Store106)),h=4)$mean,3)
+```
+
+```{r}
+# store 292 $ 876 early close issue 
+ts.plot(train_byrow_matrix$Store292)
+test_byrow_matrix$Store292
+# only h=1 prediction with arima model but still large 0.804
+mape(test_byrow_matrix$Store292[1],forecast(auto.arima(train_byrow_matrix$Store292,lambda = BoxCox.lambda(train_byrow_matrix$Store292)),h=1)$mean,3)
+# using afrima 0.181
+mape292=mape(test_byrow_matrix$Store292[1],forecast(arfima(train_byrow_matrix$Store292),h=1)$mean,3)
+mape292
+############################### SMAPE 
+smape_292<-smape(test_byrow_matrix$Store292[1],forecast(arfima(train_byrow_matrix$Store292),h=1)$mean,3)
+smape_292
+# for store 876
+ts.plot(train_byrow_matrix$Store876)
+# choose model 
+result<-data.frame()
+for (d in 0:1){
+  for(p in 0:3){
+    for(q in 0:3){
+    fit<-Arima(train_byrow_matrix$Store876,order=c(p,d,q),lambda = BoxCox.lambda(train_byrow_matrix$Store876))
+    result<-rbind(result,c(p,d,q,fit$aic,fit$bic))
+  }
+}
+}
+names(result)<-c("p","d","q","AIC","BIC")  
+result
+# We can see that model Arima(2,0,0) smallest AIC 
+result[which.min(result$AIC),]
+result[which.min(result$BIC),]
+# use arima for store 876
+arima_876<-Arima(train_byrow_matrix$Store876,order=c(2,0,0),lambda = BoxCox.lambda(train_byrow_matrix$Store876))
+arima_mape876=mape(test_byrow_matrix$Store876[1:2],forecast(arima_876,h=2)$mean,3)
+arima_mape876
+# use arfima 
+arfi_876=arfima(train_byrow_matrix$Store876)
+arfi_mape876=mape(test_byrow_matrix$Store876[1:2],forecast(arfi_879,h=2)$mean,3)
+# arima is better 
+mape_876<-arima_mape876
+mape_876
+################################################SMAPE
+smape_876<-smape(test_byrow_matrix$Store876[1:2],forecast(arima_876,h=2)$mean,3)
+smape_876
+```
+
+```{r}
+# 589,699,837,861
+ts.plot(train_byrow_matrix$Store589)
+# noise influence at first 20 weeks 
+mape(test_byrow_matrix$Store589,forecast(auto.arima(train_byrow_matrix$Store589[20:130],lambda = BoxCox.lambda(train_byrow_matrix$Store589[20:130])),h=4)$mean,3)
+# arfima without noise remove, prefer this
+mape_589=mape(test_byrow_matrix$Store589,forecast(arfima(train_byrow_matrix$Store589),h=4)$mean,3)
+mape_589
+##################################### SMAPE 
+smape_589<-smape(test_byrow_matrix$Store589,forecast(arfima(train_byrow_matrix$Store589),h=4)$mean,3)
+smape_589
+# 665
+ts.plot(train_byrow_matrix$Store665)
+# choose arfima because it has some regular slack performance, it has influence
+mape_665=mape(test_byrow_matrix$Store665,forecast(arfima(train_byrow_matrix$Store665),h=4)$mean,3)
+#######################################################3
+smape_665<-smape(test_byrow_matrix$Store665,forecast(arfima(train_byrow_matrix$Store665),h=4)$mean,3)
+smape_665
+# 699
+ts.plot(train_byrow_matrix$Store699)
+mape699=mape(test_byrow_matrix$Store699,forecast(arfima(train_byrow_matrix$Store699),h=4)$mean,3)
+mape699
+smape699<-smape(test_byrow_matrix$Store699,forecast(arfima(train_byrow_matrix$Store699),h=4)$mean,3)
+smape699
+# 837 very noise 
+ts.plot(train_byrow_matrix$Store837)
+# arfima gives a very good options 
+mape837=mape(test_byrow_matrix$Store837,forecast(arfima(train_byrow_matrix$Store837),h=4)$mean,3)
+mape837
+################################### SMAPE
+smape837<-smape(test_byrow_matrix$Store837,forecast(arfima(train_byrow_matrix$Store837),h=4)$mean,3)
+smape837
+ts.plot(train_byrow_matrix$Store861)
+mape861=mape(test_byrow_matrix$Store861,forecast(arfima(train_byrow_matrix$Store861),h=4)$mean,3)
+mape861
+smape861<-smape(test_byrow_matrix$Store861,forecast(arfima(train_byrow_matrix$Store861),h=4)$mean,3)
+smape861
+```
+
+```{r}
+# show improvement 
+impro_list=cbind(mape_105,mape_106,mape292,mape_589,mape_665,mape699,mape837,mape861,mape_876)
+colnames(impro_list)=colnames(bad_performance)
+rbind(bad_performance,impro_list)
+```
+```{r}
+# show improvement in smape
+impro_list_smape=cbind(smape_105,smape_106,smape_292,smape_589,smape_665,smape699,smape837,smape861,smape_876)
+colnames(impro_list_smape)=colnames(bad_perform_SMAPE)
+rbind(bad_perform_SMAPE,impro_list_smape)
+
+
+```
+
+```{r}
+# final mape after fixing some bad stores with arfima models or removing noise or h=1,h=2 or arima model
+mape_auto$Store105<-mape_105
+mape_auto$Store106<-mape_106
+mape_auto$Store292<-mape292
+mape_auto$Store589<-mape_589
+mape_auto$Store665<-mape_665
+mape_auto$Store699<-mape699
+mape_auto$Store837<-mape837
+mape_auto$Store861<-mape861
+mape_auto$Store876<-mape_876
+```
+
+```{r}
+#### smape results for auto.arima with fixed value
+smape_auto$Store105 <-smape_105
+smape_auto$Store106<- smape_106
+smape_auto$Store292<- smape_292
+smape_auto$Store589<- smape_589
+smape_auto$Store665<- smape_665
+smape_auto$Store699<- smape699
+smape_auto$Store837<- smape837
+smape_auto$Store861<- smape861
+smape_auto$Store876<- smape_876
+# saving prediction results results 
+
+```
+
+
+
+```{r}
+# create ICA for train_week_sale
+library(fastICA)
+ICA_data=fastICA(train_byrow_matrix, 2,alg.typ = "deflation", fun = "logcosh", alpha = 1, method = "R", row.norm = FALSE, maxit = 200, tol = 0.0001, verbose = TRUE)
+names(ICA_data)
+plot(ICA_data$S, main = "ICA components")
+# this is not correct because component is negative, but I apply abs for sales
+recon_data<-abs(ICA_data$S %*% ICA_data$A)
+dim(recon_data) # 130,935
+dim(ICA_data$S) # 130,2
+dim(ICA_data$A) # 2,935
+recon_data<-as.data.frame(recon_data)
+colnames(recon_data)<-colnames(train_byrow_matrix)
+recon_data
+
+```
+```{r}
+# check ICA mape loss 
+models_ICA<-list()
+forecast_num_ICA<-list()
+for (i in (1:ncol(recon_data))){
+  model_ICA<- auto.arima(recon_data[,i],lambda = BoxCox.lambda(recon_data[,i]))
+  forecast_num_ICA[[i]]<-forecast(model_ICA,h=4)$mean
+  models_ICA[[i]]<-model_ICA
+}
+
+forecast_num_ICA<-data.frame(matrix(unlist(forecast_num_ICA), ncol=length(forecast_num_ICA), byrow=F))
+colnames(forecast_num_ICA)<-colnames(recon_data)
+forecast_num_ICA
+```
+
+```{r}
+# get mape
+
+mape_auto_ICA<-list()
+for (i in (1:ncol(forecast_num_ICA))){
+  mape_auto_ICA[[i]]<-mape(test_byrow_matrix[,i],forecast_num_ICA[,i],3)
+}
+
+mape_auto_ICA<-data.frame(matrix(unlist(mape_auto_ICA), ncol=length(mape_auto_ICA), byrow=F))
+colnames(mape_auto_ICA)<-colnames(test_byrow_matrix)
+
+mape_auto_ICA
+
+
+smape_auto_ICA<-list()
+for (i in (1:ncol(forecast_num_ICA))){
+  smape_auto_ICA[[i]]<-smape(test_byrow_matrix[,i],forecast_num_ICA[,i],3)
+}
+
+smape_auto_ICA<-data.frame(matrix(unlist(smape_auto_ICA), ncol=length(smape_auto_ICA), byrow=F))
+colnames(smape_auto_ICA)<-colnames(test_byrow_matrix)
+
+smape_auto_ICA
+
+mean(as.numeric(smape_auto_ICA))
+
+```
+```{r,warning=FALSE}
+# I don't think ICA is an appropriate way for negative components , try NMF
+#install.packages('NMF')
+library(NMF)
+nmf_model <- nmf(train_byrow_matrix,10)
+w<-nmf_model@fit@W
+h<-nmf_model@fit@H
+recon_nmf<-w %*% h
+recon_nmf<-as.data.frame(recon_nmf)
+colnames(recon_nmf)<-colnames(train_byrow_matrix)
+recon_nmf
+```
+
+```{r}
+library(forecast)
+
+fitted_num_NMF<-list()
+for (i in (1:ncol(recon_nmf))){
+  fitted_num_NMF[[i]]<-auto.arima(recon_nmf[,i],lambda = BoxCox.lambda(recon_nmf[,i]))$fitted
+
+}
+
+fitted_num_NMF<-data.frame(matrix(unlist(fitted_num_NMF), ncol=length(fitted_num_NMF), byrow=F))
+colnames(fitted_num_NMF)<-colnames(recon_nmf)
+fitted_num_NMF
+
+
+smape<-function(y,yhat,digits)
+  round(mean(abs(y-yhat)/(abs(y)+abs(yhat))),3)
+
+train_smape_NMF<-list()
+for (i in 1:ncol(fitted_num_NMF)){
+  train_smape_NMF[i]<-smape(y=fitted_num_NMF[,i],yhat =recon_nmf[,i],3)
+}
+
+
+train_smape_NMF<-data.frame(matrix(unlist(train_smape_NMF), ncol=length(train_smape_NMF), byrow=F))
+colnames(train_smape_NMF)<-colnames(test_byrow_matrix)
+# this is a large improvement after using NMF to reconstruct. 
+train_smape_NMF[which(train_smape_NMF>0.4)]
+mean(as.numeric(train_smape_NMF))
+```
+
+
+```{r}
+# NMF predict values
+models_NMF<-list()
+forecast_num_NMF<-list()
+for (i in (1:ncol(recon_nmf))){
+  model_NMF<- auto.arima(recon_nmf[,i],lambda = BoxCox.lambda(recon_nmf[,i]))
+  forecast_num_NMF[[i]]<-forecast(model_NMF,h=4)$mean
+  models_NMF[[i]]<-model_NMF
+}
+
+forecast_num_NMF<-data.frame(matrix(unlist(forecast_num_NMF), ncol=length(forecast_num_NMF), byrow=F))
+colnames(forecast_num_NMF)<-colnames(recon_nmf)
+forecast_num_NMF
+```
+
+```{r}
+# get smape
+smape_auto_NMP<-list()
+for (i in (1:ncol(forecast_num_NMF))){
+  smape_auto_NMP[[i]]<-smape(test_byrow_matrix[,i],forecast_num_NMF[,i],3)
+}
+
+smape_auto_NMP<-data.frame(matrix(unlist(smape_auto_NMP), ncol=length(smape_auto_NMP), byrow=F))
+colnames(smape_auto_NMP)<-colnames(test_byrow_matrix)
+# this is a large improvement after using NMF to reconstruct. 
+smape_auto_NMP[which(smape_auto_NMP>0.4)]
+mean(as.numeric(smape_auto_NMP))
+
+
+smape_auto_NMP
+
+forecast_num_NMF$Store292
+```
+
+```{r}
+Drive_pre_NMF<-t(forecast_num_NMF)
+colnames(Drive_pre_NMF)<-paste("pred_",unique(test$Date))
+Drive_act_test<-t(test_byrow_matrix)
+colnames(Drive_act_test)<-paste("actual_",unique(test$Date))
+
+Drive_NMF<-cbind(Drive_act_test,Drive_pre_NMF)
+model_names<-rep("NMF",935)
+Drive_NMF<-as.data.frame(Drive_NMF)
+Drive_NMF$Model<-model_names
+Drive_NMF
+write.csv(Drive_NMF,'Actual_Predicted_trans_NMF.csv')
+```
+
+
+```{r}
+# Get mape
+mape_auto_NMP<-list()
+for (i in (1:ncol(forecast_num_NMF))){
+  mape_auto_NMP[[i]]<-mape(test_byrow_matrix[,i],forecast_num_NMF[,i],3)
+}
+
+mape_auto_NMP<-data.frame(matrix(unlist(mape_auto_NMP), ncol=length(mape_auto_NMP), byrow=F))
+colnames(mape_auto_NMP)<-colnames(test_byrow_matrix)
+# this is a large improvement after using NMF to reconstruct. 
+mape_auto_NMP[which(mape_auto_NMP>0.4)]
+mape_auto_NMP
+
+
+forecast_num_NMF$Store292
+```
+
+```{r}
+# comparison between auto_arima with fixed and NMF
+compa_auto_nmf<-rbind(mape_auto_NMP,mape_auto)
+compa_auto_nmf<-cbind(c("NMP","Arima_withAfrima"),compa_auto_nmf)
+compa_auto_nmf
+```
+
+
+```{r}
+# tbats
+library(tseries)
+library(forecast)
+
+
+forecast_num_NMF_tbats<-list()
+for (i in (1:ncol(recon_nmf))){
+  forecast_num_NMF_tbats[[i]]<-forecast(tbats(recon_nmf[,i]),h=4)$mean
+}
+
+forecast_num_NMF_tbats<-data.frame(matrix(unlist(forecast_num_NMF_tbats), ncol=length(forecast_num_NMF_tbats), byrow=F))
+colnames(forecast_num_NMF_tbats)<-colnames(recon_nmf)
+forecast_num_NMF_tbats
+
+
+
+
+smape_tbats_NMP<-list()
+for (i in (1:ncol(forecast_num_NMF_tbats))){
+  smape_tbats_NMP[[i]]<-smape(test_byrow_matrix[,i],forecast_num_NMF_tbats[,i],3)
+}
+
+smape_tbats_NMP<-data.frame(matrix(unlist(smape_tbats_NMP), ncol=length(smape_tbats_NMP), byrow=F))
+colnames(smape_tbats_NMP)<-colnames(test_byrow_matrix)
+# this is a large improvement after using NMF to reconstruct. 
+smape_tbats_NMP[which(smape_tbats_NMP>0.4)]
+mean(as.numeric(smape_tbats_NMP))
+```
+
+
+```
+
+
+
+

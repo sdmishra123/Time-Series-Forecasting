@@ -157,4 +157,5 @@ SMAPE ignores outliers. It is also invariant if you linearly rescale data. In ou
 ![alt text](https://github.com/sdmishra123/Time-Series-Forecasting/blob/master/Future%20Work.png)
 
 
-### Team Members: This was a group effort involving Yiyan (James), Li Cao, Radhika Singh Ghelot 
+# Team Members: 
+> This was a group effort involving Yiyan (James), Li Cao, Radhika Singh Ghelot 

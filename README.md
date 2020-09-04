@@ -50,14 +50,21 @@ Training Window: Jan 2013 - June 2015<br/>
 Test Window: Forecast 4 weeks of Sales from  5th of July 2015 - 26th of July 2015<br/>
 
 # Proposed Models: <br/>
+## Overview:
+
 We will evaluate dimensionality-reduction-based modelling and Hierarchical clustering approaches to forecast the next 4 weeks of each store: <br/>
-I) Layer 1: Dimensionality Reduction Technique: Singular Value Decomposition (SVD)<br/>
+![alt text](https://github.com/sdmishra123/Time-Series-Forecasting/blob/master/proposed%20Model.png)
+
+
+I) Approach I <br/>
+Layer 1: Dimensionality Reduction Technique: Singular Value Decomposition (SVD)<br/>
 Layer 2:<br/>
 1.Auto Arima<br/>
 2.TSLM<br/>
 3.Prophet<br/>
 4.Arima (Grid Search)<br/>
 
+Step 1: Generating the Principal Components<br/>
 To reduce the 935 stores to a lower-dimensionality representation, we performed Singular Value Decomposition to then identify principal components to represent our data.<br/>
 SVD decomposes a matrix A (dim nxd) into:<br/>
   matrix U with columns of left singular vectors (nxn)<br/>
@@ -66,15 +73,42 @@ SVD decomposes a matrix A (dim nxd) into:<br/>
 
   ![alt text](https://github.com/sdmishra123/Time-Series-Forecasting/blob/master/image.png)
 
-II) Layer 1: Dimensionality Reduction Technique: Independent Component Analysis (ICA)<br/>
+Step2: Forecasting the Principal Components <br/>
+After calculating the U, S, V of the SVD, we need to choose the principal components to forecast<br/>
+The matrix of principal component columns is calculated as UᐧS (dim nxd)<br/>
+Analyzing the explained variance ratio of these components with a scree plot of d, we identify that the first 3 components account for 99% of the total variance of the data set.<br/>
+Now we can use the first 3 principal component columns of UᐧS as the time series to forecast.<br/>
+
+Step3: Reconstruction of Original Sales<br/>
+After forecasting the first 3 columns of UᐧS, we need to recompose the principal component forecasts back to the 935 stores sales.<br/>
+The UᐧS matrix is extended by the h steps forecasted<br/>
+The forecasted values are placed in the first 3 columns of the n+1 to n+h rows.<br/>
+The remaining values of the forecasted rows are filled with the values from the nth (last known) row.<br/>
+The original A (plus forecast) is then reconstructed with the dot product A = UᐧSᐧVT <br/>
+Final outcome : 134 rows (representing the time series Jan 2013 to July 2015) and 935 columns(fitted + forecasted values for the 935 stores)<br/>
+
+![alt text](https://github.com/sdmishra123/Time-Series-Forecasting/blob/master/SVD.png)
+
+
+II) Approach II <br/>
+Layer 1: Dimensionality Reduction Technique: Independent Component Analysis (ICA)<br/>
 Layer 2:<br/>
 1.Auto Arima<br/>
 
-III) Layer 1: Non-Negative Matrix Factorization (NMF)<br/>
+![alt text](https://github.com/sdmishra123/Time-Series-Forecasting/blob/master/ICA.png)<br/>
+
+![alt text](https://github.com/sdmishra123/Time-Series-Forecasting/blob/master/ICA%202.png)<br/>
+
+
+III) Approach III <br/>
+Layer 1: Non-Negative Matrix Factorization (NMF)<br/>
 Layer 2:<br/>
 1.Auto Arima<br/>
 
-IV)Layer 1: Hierarchical (HTS)<br/>
+![alt text](https://github.com/sdmishra123/Time-Series-Forecasting/blob/master/NMF.png)
+
+IV) Approach IV <br/>
+Layer 1: Hierarchical (HTS)<br/>
 Layer2:<br/>
 Auto Arima<br/>
   1)Middle Out<br/>
@@ -82,8 +116,4 @@ Auto Arima<br/>
   3)Optimal Combination<br/>
   4)Bottom-Up<br/>
   
-  
-
-
-
-
+ ![alt text](https://github.com/sdmishra123/Time-Series-Forecasting/blob/master/HTS.png) 

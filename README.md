@@ -154,4 +154,4 @@ SMAPE ignores outliers. It is also invariant if you linearly rescale data. In ou
 
 > 3. For some stores ARFIMA model showed better forecast with small error rate(sMAPE) given the time series of those stores showed long memory. Some sample stores are shown below in the image.
 
-![alt text](https://github.com/sdmishra123/Time-Series-Forecasting/blob/master/Screen%20Shot%202020-09-04%20at%209.36.58%20AM.png)
+![alt text](https://github.com/sdmishra123/Time-Series-Forecasting/blob/master/Future%20Work.png)

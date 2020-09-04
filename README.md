@@ -50,10 +50,9 @@ Training Window: Jan 2013 - June 2015<br/>
 Test Window: Forecast 4 weeks of Sales from  5th of July 2015 - 26th of July 2015<br/>
 
 # Proposed Models: <br/>
-## Overview:
+## Overview:<br/>
 
-We will evaluate dimensionality-reduction-based modelling and Hierarchical clustering approaches to forecast the next 4 weeks of each store: <br/>
-![alt text](https://github.com/sdmishra123/Time-Series-Forecasting/blob/master/proposed%20Model.png)
+![alt text](https://github.com/sdmishra123/Time-Series-Forecasting/blob/master/proposed%20Model.png)<br/>
 
 
 I) Approach I <br/>

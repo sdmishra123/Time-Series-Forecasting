@@ -64,6 +64,7 @@ SVD decomposes a matrix A (dim nxd) into:<br/>
   matrix V with columns of right singular vectors (dxd), and <br/>
   diagonal matrix S of the singular values of A (nxd) such that A = UᐧSᐧVT <br/>
 
+  ![alt text](https://github.com/sdmishra123/Time-Series-Forecasting/blob/master/image.png)
 
 II) Layer 1: Dimensionality Reduction Technique: Independent Component Analysis (ICA)<br/>
 Layer 2:<br/>
